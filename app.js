@@ -169,7 +169,7 @@ function accessForm(p, boss) {
 
 // ------------------------------------------------------------ the password, shown once
 const LINK = CFG.url + '/functions/v1/tally';            // one link for everyone; the sign-in decides who sees what
-function steps(short, pw) { return 'Connector link: ' + LINK + '\nShort name: ' + short + '\nPassword: ' + pw + '\n\nSteps:\n1) Open Claude > Settings > Connectors.\n2) Press Add custom connector. Name it Tally Data Access, paste the link, press Add.\n3) Press Connect. A sign-in page opens.\n4) Enter the short name and password, press Sign in, then Connect.\n5) Ask in Claude: "Using Tally Data Access, which companies can I see?"'; }
+function steps(short, pw) { return 'Connector link: ' + LINK + '\nShort name: ' + short + '\nPassword: ' + pw + '\n\nSteps:\n1) Open Claude > Settings > Connectors.\n2) Press Add custom connector. Name it Tally Data Access, paste the link, press Add. Leave Advanced settings empty.\n3) Press Connect. A sign-in page opens.\n4) Enter the short name and password on that page, not in Claude. Press Sign in, then Connect.\n5) Ask in Claude: "Using Tally Data Access, which companies can I see?"'; }
 function inviteText(short, pw) { return 'Hi, here is your access to the Tally data.\n\n' + steps(short, pw) + '\n\nKeep this password private.'; }
 function showInvite(title, short, pw, email, phone) {
   const msg = inviteText(short, pw), done = t => say(t, true);
@@ -179,7 +179,7 @@ function showInvite(title, short, pw, email, phone) {
   const line = (t, v) => el('div', {}, el('div', { className: 'hint', style: 'margin:10px 0 0' }, t), el('div', { className: 'pw small' }, v));
   alone(el('h2', {}, title), el('p', { className: 'hint', style: 'margin:0' }, 'For ' + short + '. The password is shown only now; it cannot be looked up later, only reset.'),
     line('Connector link (same for everyone)', LINK), line('Short name', short), line('Password', pw),
-    el('ol', {}, ...['Claude > Settings > Connectors', 'Add custom connector, paste the link, press Add', 'Press Connect, the sign-in page opens', 'Short name and password, Sign in, then Connect'].map(t => el('li', {}, t))),
+    el('ol', {}, ...['Claude > Settings > Connectors', 'Add custom connector, paste the link, press Add. Leave Advanced settings empty', 'Press Connect, the sign-in page opens', 'Short name and password on that page, not in Claude. Sign in, then Connect'].map(t => el('li', {}, t))),
     el('div', { className: 'acts' }, mail, wa, el('button', { onclick: () => copy(msg, 'Everything copied. Paste it anywhere.') }, 'Copy everything')),
     el('p', { className: 'hint' }, 'All three carry the same message. Email and WhatsApp open with it ready; you press Send yourself.'),
     el('button', { className: 'main', onclick: () => open('People') }, 'Done'));
