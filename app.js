@@ -20,7 +20,7 @@ function el(tag, props = {}, ...kids) {           // text only, never HTML from 
   return e;
 }
 function say(text, good = false) { const m = $('msg'); m.textContent = text || ''; m.className = good ? 'good' : ''; m.hidden = !text; if (text) m.scrollIntoView({ block: 'nearest' }); }
-function show(id) { for (const x of ['signIn', 'codeForm', 'enrol', 'app']) $(x).hidden = x !== id; $('who').hidden = id === 'signIn'; }
+function show(id) { for (const x of ['signIn', 'codeForm', 'enrol', 'app']) $(x).hidden = x !== id; $('who').hidden = id === 'signIn'; if (id === 'app') $('tabs').after($('msg')); else document.querySelector('main').prepend($('msg')); }
 function table(heads, rows) {
   if (!rows.length) return el('p', { className: 'hint' }, 'Nothing to show.');
   return el('div', { className: 'scroll' }, el('table', {}, el('thead', {}, el('tr', {}, ...heads.map(h => el('th', { scope: 'col' }, h)))),
@@ -119,7 +119,7 @@ async function enter() {
 async function open(name) {
   for (const b of $('tabs').children) b.setAttribute('aria-selected', b.textContent === name);
   say(''); $('view').replaceChildren(el('p', { className: 'hint' }, 'Loading…'));
-  await busy(null, async () => { $('view').replaceChildren(el('div', { className: 'card' }, ...await TABS[name]())); });
+  await busy(null, async () => { $('view').replaceChildren(el('div', { className: name === 'People' ? 'plain' : 'card' }, ...await TABS[name]())); });
 }
 function alone(...kids) { $('view').replaceChildren(el('div', { className: 'card pop' }, ...kids)); }      // one screen at a time
 function question(text, yes, back) {
@@ -200,19 +200,28 @@ async function viewAdd() {
     el('p', { className: 'hint' }, 'Power = can they manage users. Job role fills the checklist, then tick or untick any area for this person.'))];
 }
 async function viewPeople() {
-  const people = await manage('list');
+  const people = await manage('list'), login = ((S.user && S.user.email) || '').toLowerCase();
   const go = (t, cls, fn) => el('button', { className: cls, onclick: fn }, t);
-  const rows = people.map(p => {
-    const all = p.power === 'super_admin', n = p.areas.length;
-    return [el('div', {}, el('strong', {}, p.short_name || p.name), el('div', { className: 'hint', style: 'margin:0' }, p.name)), el('span', { className: 'pill' + (all ? ' boss' : '') }, POWER[p.power]),
-      all ? 'everything' : (p.job_role || 'Custom') + ' · ' + n + '/' + AREAS.length + ' areas', el('span', { className: 'pill' + (p.active ? '' : ' off') }, p.active ? 'On' : 'Off'),
-      all ? 'all' : p.books.length ? p.books.join(', ') : el('span', { className: 'pill off' }, 'none'),
-      el('div', { className: 'acts' }, go('Edit', '', () => viewEdit(p)), go('Invite', '', () => newPassword(p, 'Make a new password and invite ' + p.short_name + '? The old password stops working.', 'Send the invite')),
-        go(p.active ? 'Switch off' : 'Switch on', '', ev => busy(ev.target, async () => { await manage('active', { short_name: p.short_name, active: !p.active }); await open('People'); say(p.short_name + (p.active ? ' is switched off.' : ' is switched on.'), true); })),
-        go('Reset pw', '', () => newPassword(p, 'Reset the password of ' + p.short_name + '? The old password stops working.', 'Password reset')),
-        go('Remove', 'bad', () => question('Remove ' + p.short_name + '? Access stops at once.', async () => { await server('remove', { short_name: p.short_name }); await open('People'); say(p.short_name + ' is removed.', true); }, 'People')))];
+  const cards = people.map(p => {
+    const all = p.power === 'super_admin', n = p.areas.length, b = p.books.length, who = p.short_name || p.name;
+    const me = (p.by_short_name ? p.short_name + '@people.tallydata.invalid' : p.email || '').toLowerCase() === login;
+    const sees = all ? 'All companies, everything' : (p.job_role || 'Custom') + ' · ' + (n === AREAS.length ? 'all ' + n : n + ' of ' + AREAS.length) + ' data areas';
+    const top = el('div', { className: 'split' }, el('div', { className: 'who' }, el('span', { className: 'av', 'aria-hidden': 'true' }, (who[0] || '?').toUpperCase()),
+      el('div', {}, el('strong', {}, who), ' ', p.name && p.name.toLowerCase() !== who.toLowerCase() ? el('span', { className: 'soft' }, p.name + ' ') : null,
+        el('span', { className: 'pill' + (all ? ' boss' : '') }, POWER[p.power]), me ? el('span', { className: 'pill you' }, 'You') : null, el('div', { className: 'soft' }, sees))));
+    const edit = go('Edit', '', () => viewEdit(p));
+    if (me) { top.append(edit); return el('div', { className: 'person' }, top); }            // nobody switches off or removes themselves by mistake
+    top.append(el('div', { className: 'onoff' }, el('span', {}, p.active ? 'On' : 'Off'), el('button', { className: 'sw' + (p.active ? ' on' : ''), role: 'switch', 'aria-checked': String(p.active), 'aria-label': 'Access of ' + who,
+      onclick: ev => busy(ev.currentTarget, async () => { await manage('active', { short_name: p.short_name, active: !p.active }); await open('People'); say(p.short_name + (p.active ? ' is switched off.' : ' is switched on.'), true); }) }, el('i'))));
+    const list = el('div', { className: 'chips', hidden: true }, ...p.books.map(x => el('span', { className: 'pill' }, x))), label = () => b + (b === 1 ? ' company, ' : ' companies, ') + (list.hidden ? 'show' : 'hide');
+    const toggle = all ? el('span', { className: 'soft' }, 'All companies') : !b ? el('span', { className: 'pill off' }, 'No company') : el('button', { className: 'link', 'aria-expanded': 'false',
+      onclick: ev => { list.hidden = !list.hidden; ev.currentTarget.textContent = label(); ev.currentTarget.setAttribute('aria-expanded', String(!list.hidden)); } }, label());
+    return el('div', { className: 'person' + (p.active ? '' : ' dim') }, top, el('div', { className: 'split foot' }, toggle, el('div', { className: 'acts' }, edit,
+      go('Invite', '', () => newPassword(p, 'Make a new password and invite ' + p.short_name + '? The old password stops working.', 'Send the invite')),
+      go('Reset pw', '', () => newPassword(p, 'Reset the password of ' + p.short_name + '? The old password stops working.', 'Password reset')),
+      go('Remove', 'bad', () => question('Remove ' + p.short_name + '? Access stops at once.', async () => { await server('remove', { short_name: p.short_name }); await open('People'); say(p.short_name + ' is removed.', true); }, 'People')))), list);
   });
-  return [el('div', { className: 'split' }, el('h2', {}, 'People'), el('button', { onclick: () => open('People') }, 'Refresh')), table(['Name', 'Power', 'Can see data', 'Access', 'Companies', ''], rows)];
+  return [el('div', { className: 'split head' }, el('h2', {}, 'People ', el('span', { className: 'soft' }, String(people.length))), el('div', { className: 'acts' }, el('button', { onclick: () => open('People') }, 'Refresh'), el('button', { className: 'main', onclick: () => open('Add a person') }, 'Add a person'))), ...cards];
 }
 function newPassword(p, text, title) { question(text, async () => { const r = await server('reset', { short_name: p.short_name }); showInvite(title, p.by_short_name ? p.short_name : p.email || p.short_name, r.password, p.email, p.phone); if (r.warn) say(r.warn); }, 'People'); }
 function viewEdit(p) {
