@@ -180,8 +180,8 @@ function showInvite(title, short, pw, email, phone) {
   alone(el('h2', {}, title), el('p', { className: 'hint', style: 'margin:0' }, 'For ' + short + '. The password is shown only now; it cannot be looked up later, only reset.'),
     line('Connector link (same for everyone)', LINK), line('Short name', short), line('Password', pw),
     el('ol', {}, ...['Claude > Settings > Connectors', 'Add custom connector, paste the link, press Add', 'Press Connect, the sign-in page opens', 'Short name and password, Sign in, then Connect'].map(t => el('li', {}, t))),
-    el('div', { className: 'acts' }, el('button', { onclick: () => copy(LINK, 'Address copied.') }, 'Copy address'), mail, wa, el('button', { onclick: () => copy(msg, 'Instructions copied.') }, 'Copy instructions'), el('button', { onclick: () => copy(pw, 'Password copied.') }, 'Copy password')),
-    el('p', { className: 'hint' }, 'Email and WhatsApp open with the message ready. You press Send yourself.'),
+    el('div', { className: 'acts' }, mail, wa, el('button', { onclick: () => copy(msg, 'Everything copied. Paste it anywhere.') }, 'Copy everything')),
+    el('p', { className: 'hint' }, 'All three carry the same message. Email and WhatsApp open with it ready; you press Send yourself.'),
     el('button', { className: 'main', onclick: () => open('People') }, 'Done'));
 }
 // ------------------------------------------------------------ screens
